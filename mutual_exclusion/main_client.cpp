@@ -1,5 +1,4 @@
 #include "ressource.hpp"
-#include "ressource.cpp"
 #include <stdio.h>
 
 int main(void){

@@ -1,5 +1,4 @@
 #include "request_message.hpp"
-#include "request_message.cpp"
 #include "ressource.hpp"
 #include <sys/socket.h>
 #include <sys/types.h>

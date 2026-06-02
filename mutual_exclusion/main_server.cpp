@@ -1,5 +1,4 @@
 #include "request_message.hpp"
-#include "request_message.cpp"
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
