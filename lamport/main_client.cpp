@@ -43,9 +43,9 @@ int main(int argc, char* argv[])
   // Close the connection
   close(client_socket);
 
-  printf("%s\n", message);
+  printf("received message %s\n", message);
   uint32_t time;
   get_time(clock,&time);
-  printf("time %u\n",time);
+  printf("received at time %u\n",time);
   return 0;
 }

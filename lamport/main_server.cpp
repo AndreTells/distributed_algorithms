@@ -52,10 +52,11 @@ int main(void){
 
   // Send message to the client
   timed_send(client_socket, message, strlen(message), 0, clock);
+  printf("sent message: %s\n", message);
 
   uint32_t time;
   get_time(clock,&time);
-  printf("time %u\n",time);
+  printf("sent message at time %u\n",time);
 
   // Close the client socket
   close(client_socket);
