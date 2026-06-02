@@ -1,0 +1,116 @@
+\documentclass{article}
+\usepackage{graphicx}
+
+\begin{document}
+\section{Introdução}
+O presente documento tem por finalidade descrever a implementação dos seguintes
+algorítimos distribuídos e as principais escolhas de arquitetura feitas nestes:
+
+\begin{itemize}
+  \item Relógio de Lamport 
+  \item Algorítmo de Exclusão Mútua Cetralizado
+  \item Algorítmo Bully para Eleição
+\end{itemize}
+
+Primeiramente, são explicadas as ferramentas utilizadas para implementar os
+algorítmos supracitados. Após, as implementações são explicadas detalhadamente
+seguido de uma seção para discutir os pontos principais que pôde-se verificar
+com o exercício. Finalmente, a conclusão descreve possíveis limitações do
+trabalho e como poderia ter sido melhorado em outro contexto. 
+
+\section{Metodologia}
+\section{Linguagem de Programação}
+A fim de manter o foco do exercício no algorítmo sem perder o nível de detalhe,
+foi escolhido implemetar os algorítmos em C++ visto o acesso relativamente
+direto que este tem as capacidades de rede do sistema.  
+
+\section{Compilação}
+A fim de ter um sistema e reprodutível, todos os testes foram compilados
+utilizando o sistema 'nix' que permite descrever tais processos e suas
+dependencias de uma forma declarativa.
+
+\section{Comunicação}
+%TODO: add citation to posix man pages
+A comunicação TCP/IP foi escolhida para a comunicação entre os nós da rede
+devido a sua interface POSIX intuitiva em C/C++. Como descrito no manual da
+interace, tais connexões podem ser realizando o processo seguinte: 
+
+\includegraphics[width=\textwidth]{./diagrams/posix_server.png}
+
+Analogamente, clientes devem utilizar os seguintes passos para se conectar a um
+servidor.
+
+\includegraphics[width=\textwidth]{./diagrams/posix_client.png}
+
+Como estes processos são simples e não são o foco do presente projeto, deste
+ponto em diante não será mais detalhado como um servidor e um cliente se
+conectão no contexto do projeto, apenas que o fazem e o que se espera caso tal
+não seja possível.  
+
+\section{Ambiente de Teste}
+Para simular um ambiente distribuído containers docker foram gerados localmente
+com instâncias dos sistemas. Julga-se que este procedimento tem a vantagem de
+ser mais facilmente reproduzível que um teste instanciando em máquinas virtuais
+no google cloud.
+
+As imagens docker foram construidas utilizando também nix visto que o mesmo já é
+utilizado para o processo de compilação. Cada um dos algorítmos possui sua
+respectiva pasta de build que descreve como compilar seu projeto. 
+
+\section{Resultados}
+\subsection{Relógio de Lamport}
+A implementação deste algorítmo se resume a criar um wrapper entorno dos
+mecanismos de envio e recepção de mensagens utilizados para transferir, além da
+mensagem, um relógio. No contexto atual, estes são:
+\begin{itemize}
+  \item send(...): envia um número X de bytes para através do socket
+    especificado 
+  \item recv(...): lê um número X de bytes através do socket especificado 
+\end{itemize}
+
+Assim os wrappers são nomeados, respectivamente, timed\_send e timed\_recv. Para
+se comunicar, uma vez que cliente e servidor estão conectados, realiza-se a
+seguinte sequência de passos: 
+\begin{itemize}
+  \item avançar o tempo do relógio local.
+  \item enviar o relógio local. 
+  \item enviar a messagem
+\end{itemize}
+
+Porém, para receber uma mensagem realiza-se: 
+\begin{itemize}
+  \item ler um dados sobre relógio remote
+  \item avançar tempo caso necessário
+  \item ler mensagem
+\end{itemize}
+
+Dois pontos importantes dessa implementação simples são: mensagens recebidas
+concorrentemente \& estrutura da mensagem. 
+
+Como frequentemente no contexto de redes messagens são recebidas de forma
+assíncrona, faz-se necessário que o acesso ao valor do clock seja protegido
+localmente. Para este fim, um semáforo é utilizado para controlar o acesso ao
+valor do clock, assim impedindo mudanças conflitantes de tal. 
+
+Quanto a estrutura da mensagem, perceba que o fluxo acima não impõe um tamanho
+para as mensagens. A vantagem disto é que, caso não seja necessário para o caso
+de uso do usuário, este espaço não é gasto (exemplo um usuário que sempre envia
+apenas um inteiro).
+
+Porém, caso contrário, para seguir corretamente o método, seria necessário
+enviar duas mensagens, uma contendo o tamanho e outra o conteúdo da mensagem.
+Isto pode ser problemático pois avança o tempo do relógio duas vezes, uma por
+mensagem, tornando menos claro quando um evento ocorreu visto que haveriam dois
+timestamps associados. Tal não é necessariamente um problema visto que pode ser
+facilmente tratado pelo usuário. 
+
+\subsection{Algorítmo de Exclusão Mútua Cetralizado}
+\subsection{Algorítmo Bully para Eleição}
+
+\section{Discussão}
+
+Implicitamente impõe a representação numérica utilizada no linux
+
+\section{Conclusão}
+
+\end{document}

@@ -1,0 +1,17 @@
+S1:{
+  label: "socket(...) -> Abrir o socket servidor"
+}
+
+S2:{
+  label: "bind(...) -> Atrelar o socket servidor\n ao endereço IP desejado"
+}
+
+S3:{
+  label: "listen(...) -> Habilitar conexões\n pelo socket"
+}
+
+S4:{
+  label: "accept(...) -> Esperar conexões\n de clientes"
+}
+
+S1 -> S2 -> S3 -> S4
