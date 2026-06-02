@@ -1,0 +1,28 @@
+services:
+  server:
+    image: mutual_exclusion_server:latest
+    tty: true 
+
+    networks:
+      mutual_exclusion_network:
+        ipv4_address: 172.16.238.11
+    
+  client:
+    image: mutual_exclusion_client:latest
+    tty: true 
+    environment:
+      - SERVER_IP=172.16.238.11
+
+    networks:
+      mutual_exclusion_network:
+        ipv4_address: 172.16.238.10
+
+    depends_on:
+      - server
+
+networks:
+  mutual_exclusion_network:
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.16.238.0/24"
