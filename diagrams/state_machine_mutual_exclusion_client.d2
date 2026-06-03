@@ -1,0 +1,31 @@
+S1: {
+  label: "Not Using Ressource"
+}
+
+S2: {
+  label: "Waiting For Ressource"
+}
+
+S3: {
+  label: "Has ressource"
+}
+
+S4: {
+  label: "Releasing Ressource"
+}
+
+S5: {
+  label: "Blocked"
+}
+
+S1 -> S1: "Sent REQUEST_TYPE_RELEASE\n message to server"
+
+S1 -> S2: "Sent REQUEST_TYPE_LOCK\n message to server"
+
+S2 -> S3: "Received REQUEST_TYPE_GRANT\n message from server"
+
+S3 -> S4: "Sent REQUEST_TYPE_RELEASE\n message to server"
+
+S4 -> S1: "ACK from server"
+
+S4 -> S5: "Service Blocked Waiting\n For a Response From Server"

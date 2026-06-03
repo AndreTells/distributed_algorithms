@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage{graphicx}
+\graphicspath{{./diagrams/}}
 
 \begin{document}
 \section{Introdução}
@@ -105,6 +106,25 @@ timestamps associados. Tal não é necessariamente um problema visto que pode se
 facilmente tratado pelo usuário. 
 
 \subsection{Algorítmo de Exclusão Mútua Cetralizado}
+
+O algorítmo implementado permite que clientes se conectem com um servidor e
+adquiram ou liberem recursos, de forma analoga a como mutexes são adquiridos e
+liberados em um sistema normal.
+
+A implementação do cliente é propositalmente extremamente simples.
+Primeiramente, um usuário da biblioteca precisa inicializar seu recurso. Isso
+implica em se conectar com ao servidor que esteja gerenciando o recurso. Tal
+servidor deve ser especificado através de seu IP. Uma vez que isto é feito, o
+usuário pode ou adquirir o recurso utilizando 'ressource\_lock', ou lhe liberar
+com 'ressource\_release'. 
+
+É importante observar que não há um tratamento implementado caso um dispositivo
+tente obter o recurso duas vezes. Nessa eventualidade, o sistema ficara
+bloqueado. O comportamento do cliente pode ser exemplificado pelo diagrama
+abaixo:
+
+\includegraphics[width=\textwidth]{state_machine_mutual_exclusion_client}
+
 \subsection{Algorítmo Bully para Eleição}
 
 \section{Discussão}
