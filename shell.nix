@@ -8,5 +8,6 @@ pkgs.mkShellNoCC {
     cppman
     cunit
     d2
+    librsvg
   ];
 }
