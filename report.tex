@@ -174,6 +174,51 @@ funcionamento do servidor pode ser compreendido a partir do diagrama abaixo:
 
 \subsection{Algorítmo Bully para Eleição}
 
+Para este algorítmo, cada host necessita manter uma conexão com todos outros na
+rede. Como mencionando previamente, todas as comunicações são realizadas com
+TCP, ou seja é necessário definir qual dos hosts é o cliente e qual é o servidor
+para cada relação na rede. A fim de manter a parte principal do probelma em
+evidência, a eleição, foi considerado que o tamanho da rede era conhecido no
+inicio e que todo host sabe seu id desde o início.
+
+Dado o contexto adicional apresentado acima, a implementação considera para cada
+host que é:
+\begin{itemize}
+  \item ID host remoto > ID host: host atual é cliente na relação 
+  \item ID host remoto < ID host: host atual é servidor na relação
+\end{itemize}
+
+Dessa forma, cada host mantem um thread para cada host remoto que esta ou
+tentando criar uma conexão com um host remoto ou lendo mensagens do host remoto.
+Este comportamento pode ser compreendido a partir do diagrama abaixo:
+
+\includegraphics[width=\textwidth]{state_machine_mutual_exclusion_server}
+
+Uma vez que a conexão esta feita, o host reage a mensagens de acordo com a
+decsrição do algorítmo:
+\begin{itemize}
+  \item ELECTION\_MSG\_ELECTION e ID host remoto < ID host: Responde com OK e
+    chama eleição
+  \item ELECTION\_MSG\_ELECTION e ID host remoto > ID host: Situação inesperada,
+    não responde
+  \item  ELECTION\_MSG\_OK: marca que perdeu a eleição se estiver em uma 
+  \item ELECTION\_MSG\_WINNER: registra o novo líder 
+\end{itemize}
+
+Uma vez que uma eleição é chamada, o host evia uma mensagem de eleição a todos
+os hosts com ID superior ao seu próprio. Após isso, o host espera algum tempo
+pré determinado (2 segundos para a implementação atual) e para caso algum
+vizinho resposta a mensagem de eleição com OK. Caso nenhuma resposta seja
+recebida, o host se declara líder e envia a mensagem de ELECTION\_MSG\_WINNER a
+toos hosts ativos.
+
+A fim de visualizar o comportamento, uma thread separada registra o ID do líder
+a cada 1 segundo no terminal e, caso a conexão com o líder esteja indisponível,
+chama uma eleição.
+
+Caso a conexão seja quebrada em algum ponto, o host encerra a thread para ler
+mensagens e re-inicia a thread que tenta estabelecer conexões novamente. 
+
 \section{Discussão}
 
 relógio de lamport
@@ -192,7 +237,25 @@ as duas separadas.
 Nenhum limite de clientes é explicitamente imposto, que em uma aplicação real
 poderia ser um vetor de ataque ao sistema.
 
+Eleição
+TCP é ruim para esta situação
+
+
 \section{Conclusão}
+O exercício acima permitiu observar algumas das várias dificuldades de
+implementar algorítmos remotos assim como suas várias vantagens.
+
+Um ponto que se destaca dentre os casos analisados é a transparência na
+utilização dos mecanismos uma vez que o middleware (algorítmos utilizados) está
+implementado. Isto é extremamente positivo do ponto de vista de engenharia de
+software pois abstrai muita complexidade do sistema. Porém, como descrito
+durante a seção anterior, há um custo real em performance e segurança no uso
+destes que é escondido.
+
+Algorítmos como estes são omnipresentes no mundo da programação moderna, seu uso
+é muitas vezes necessário. Mesmo que a reimplementá-los, provavelmente, não será
+uma atividade que muitos teram que realizar no dia a dia, o atual exercício tem
+valor por expor as várias problemáticas que um usuário dos mesmos algorítmos
+precisa considerar quando construindo um sistema maior.
 
 \end{document}
-
