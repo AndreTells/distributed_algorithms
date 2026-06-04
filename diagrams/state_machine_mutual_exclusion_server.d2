@@ -1,0 +1,8 @@
+direction: right
+
+S1: "Recurso Liberado"
+S2: "Recurso Adquirido\n por host X"
+
+S1 -> S2: "requesters.head := X" 
+S2 -> S2: "releasers.head != X" 
+S2 -> S1: "releasers.head := X" 

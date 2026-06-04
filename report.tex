@@ -125,12 +125,74 @@ abaixo:
 
 \includegraphics[width=\textwidth]{state_machine_mutual_exclusion_client}
 
+Já o servidor pode ter seu funcionamento dividido em quatro partes paralelas
+principais:
+
+\begin{itemize}
+  \item uma thread para receber conexões (main)
+  \item threads para ler dados de clientes (reader\_th)
+  \item uma thread para responder pedidos dos clientes (answer\_requests\_th)
+  \item uma thread para gerenciar o recurso (manage\_ressource\_th)
+\end{itemize}
+
+A thread que recebe conexões é necessária apenas pois a comuinicação é feita
+através de conexões TCP. Seu funcionamento é extremamente simples, aceita
+conexões com hosts remotos novos e cria uma thread leitora para levar seus
+pedidos em conta. Uma limitação desta implementação é que, devido a forma como a
+função `listen(...)` POSIX é implementada, há um limite no número de conexões
+que podem ficar na lista de espera. Como o presente caso é apenas um teste do
+algorítmo, este limite foi configurado para 4 arbitrariamente. 
+
+As threads leitoras são responsáveis por verificar se há uma nova mensagem da
+host remoto ou se houve alguma desconexão. 
+
+No caso de uma nova mensagem, a thread inclui a mensagem do hosts na fila de
+espera centralizada de mensagens do sistema. É important observar que, como esta
+fila de espera é acessada por várias threads, seu acesso é controlado através de
+um mutex.
+
+Caso haja uma desconxão do host remoto, é necessário finalizar a thread e
+encerrar o socket utilizado para se comunicar com este. Além disso, é necessário
+tratar o caso de o host que perdeu a conexão ter obtido o recurso durante o
+periodo que estava conectado, do contrário, o sistema ficaria bloquado. A fim de
+simplificar o sistema, impõe-se que uma perda de conexão implica em liberar o
+recurso. 
+
+A thread para responder pedidos então é encarregada de analisar os pedidos na
+lista de espera centralizada e decidir o que fazer com estes. Para pedidos do
+tipo REQUEST\_TYPE\_LOCK, a thread inclui na lista de espera de requesters.
+Similarmente para pedidos do tipo REQUEST\_TYPE\_RELEASE, a thread inclui na
+lista de releasers. 
+
+Por ultimo, a thread que gerencia o recurso é fica em um loop eterno de esperar
+algum pedido pelo recurso e esperar que o usuário do recurso o libere. O único
+caso alternativo levado em conta é caso um host remoto que não possui o recurso
+tente libera-lo, pedidos dessa natureza são simplesmente ignorados. Assim, o
+funcionamento do servidor pode ser compreendido a partir do diagrama abaixo:
+
+\includegraphics[width=\textwidth]{state_machine_mutual_exclusion_server}
+
 \subsection{Algorítmo Bully para Eleição}
 
 \section{Discussão}
 
+relógio de lamport
+
 Implicitamente impõe a representação numérica utilizada no linux
+
+Exclusão mutua
+Exclusão mutua não trata casos de vários threads, necessitaria de várias
+conexões em paralelo na implementação atual. 
+
+As threads leitoras e a thread para responder pedidos, por sua vez, na
+implementação atual, poderiam ser unidas em uma única thread. Porém, afim de
+manter um nível de separação entre a lógica das mensagens, foi decidido manter
+as duas separadas.
+
+Nenhum limite de clientes é explicitamente imposto, que em uma aplicação real
+poderia ser um vetor de ataque ao sistema.
 
 \section{Conclusão}
 
 \end{document}
+
