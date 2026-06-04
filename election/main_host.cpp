@@ -186,7 +186,8 @@ int main(int argc, char** argv){
       call_election();
     }
 
-    printf("%d",leader);
+    printf("%d\n",leader);
+    sleep(2); // Make the output of the hosts more interpretable 
   }
 
   return 0;
