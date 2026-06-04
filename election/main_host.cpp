@@ -81,7 +81,7 @@ void* connection_th(void* neighbour_id_ptr){
         if(neighbour_id<host_id){
           election_msg_e resp = ELECTION_MSG_OK;
           send(fd,&resp,sizeof(election_msg_e),0);
-          // call_election();
+          call_election();
         }
         else{
           printf("Unexpected election from bigger host\n");
@@ -89,7 +89,8 @@ void* connection_th(void* neighbour_id_ptr){
         break;
 
       case ELECTION_MSG_OK:
-        sem_post(&lost_election);
+        if(sem_trywait(&in_election) == 0)
+          sem_post(&lost_election);
         break;
 
       case ELECTION_MSG_WINNER:
@@ -123,10 +124,13 @@ void* attempt_conn_th(void* neighbour_id_ptr){
 
     address.sin_family = AF_INET;
     address.sin_port = htons(8080); // Port 8080
-    address.sin_addr.s_addr = INADDR_ANY;
+    //TODO: is this correct
+    //address.sin_addr.s_addr = INADDR_ANY;
+    inet_aton(ip_addrs[neighbour_id], (struct in_addr *) &(address.sin_addr.s_addr));
 
     int bind_res = bind(socket_fds[neighbour_id], (struct sockaddr *) &address, sizeof(address));
-    listen(socket_fds[neighbour_id], 3);
+    listen(socket_fds[neighbour_id], 1);
+    accept(socket_fds[neighbour_id],NULL,NULL);
   }
 
   else{
@@ -136,7 +140,6 @@ void* attempt_conn_th(void* neighbour_id_ptr){
     address.sin_family = AF_INET;
     address.sin_port = htons(8080);
 
-    // Set address to your computer's local address
     inet_aton(ip_addrs[neighbour_id], (struct in_addr *) &(address.sin_addr.s_addr));
 
     // Establish a connection to address on client_socket
