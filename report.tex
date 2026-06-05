@@ -274,8 +274,21 @@ limites impostos pelo servidor, que não é feito na implementação atual, um
 excesso de conexões em paralelo a esta parte do sistema poderia ser um possível
 vetor de ataque para bloquear todo o resto do sistema.
 
-Eleição
-TCP é ruim para esta situação
+Como o algorítmo de eleição depende fortemente de broadcasts, a escolha de
+conexões TCP não é muito representativa de uma situação real. Apesar disso, esta
+situação evidenciou uma problemática ligada a quem será o líder, fragmentação da
+rede.
+
+Suponha, por exemplo, que uma parte da rede perca a conexão com os nós
+superiores a sí. Nessa situação, a parte inferior da rede iniciaria uma eleição
+que seria vencido por um nó na parte inferior da rede, aquele com id mais alto
+que continua alcançável. Porém, em paralelo a isso, o resto da rede continua com
+o líder original. Isso efetivamente fragmenta a rede, que pode ser desejável
+dependendo da situação, mas nem sempre.
+
+Um caso onde tal fragmentação pode ser problemática é o líder garantir exclusão
+mútua a um recurso. Assim, no caso de uma fragmentação, seria possível dois
+hosts se tornarem o gestor do recurso.
 
 
 \section{Conclusão}
@@ -287,7 +300,7 @@ utilização dos mecanismos uma vez que o middleware (algorítmos utilizados) es
 implementado. Isto é extremamente positivo do ponto de vista de engenharia de
 software pois abstrai muita complexidade do sistema. Porém, como descrito
 durante a seção anterior, há um custo real em performance e segurança no uso
-destes que é escondido.
+destes que é escondido
 
 Algorítmos como estes são omnipresentes no mundo da programação moderna, seu uso
 é muitas vezes necessário. Mesmo que a reimplementá-los, provavelmente, não será
