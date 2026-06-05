@@ -221,21 +221,58 @@ mensagens e re-inicia a thread que tenta estabelecer conexões novamente.
 
 \section{Discussão}
 
-relógio de lamport
+Por se tratar de uma impletação extremamente básica, há limitações evidentes que
+precisariam ser tratadas em um caso de uso mais realistico. Uma tal limitação é
+a falta de tratamento para a representação de números na memória que esta
+presente em todos os algorítmos implementados. A forma correta de tratar isso
+seria sempre converter o número para a representação em rede antes de
+transferí-lo e realizar o mesmo procedimento ao receber um número.
 
-Implicitamente impõe a representação numérica utilizada no linux
+Esse tipo de tratamento, apesar de trivial, é extremamente importante no
+contexto de sistemas distribuídos heterogeneos, onde cada integrante pode estar
+em um sistmea operacional distinto com representações numéricas distintas.
 
-Exclusão mutua
-Exclusão mutua não trata casos de vários threads, necessitaria de várias
-conexões em paralelo na implementação atual. 
+Em termos de overhead para utilização do algorítmo distribuído, tanto a exclusão
+mútua quanto o algorítmo de eleição apresentam um custo significativo. A
+necessidade do sistema reagir a mensagens possivelmente assíncronas provenientes
+de vários dispositivos distintos, pelo menos em TCP, torna obrigatório o uso de
+várias threads. Apesar de isto ser aceitável no contexto de máquinas como os
+celulares e computadores modernos, o mesmo não poderia ser dito caso o alvo
+fosse utilizar estes mesmas implementações para um sistema envolvendo internet
+das coisas, onde frequentemente estas problemáticas ocorrem. 
 
-As threads leitoras e a thread para responder pedidos, por sua vez, na
-implementação atual, poderiam ser unidas em uma única thread. Porém, afim de
-manter um nível de separação entre a lógica das mensagens, foi decidido manter
-as duas separadas.
+Analisando mais especificamente os problemas ligados a cada algorítmo,
+principalmente o de exclusão mútua e de eleição, pode-se notar algumas
+complexidades adicionais ligadas a sistemas distribuídos.  
 
-Nenhum limite de clientes é explicitamente imposto, que em uma aplicação real
-poderia ser um vetor de ataque ao sistema.
+No caso da exclusão mútua, um caso que pode-se imaginar seria de um programa
+multi-thread que se utilize do recurso remoto. Há duas formas de pensar este
+problema: os threads compartilham o recurso internamente; cada um adquiri e
+libera o recurso por sí só. Apesar de a segunda aparentar mais natural, poderia
+ser ineficiente caso, por exemplo, uma thread querer adquirir o recurso quando
+uma thread no mesmo processo já o possui. Nesta situação, 2 mensagens adicionais
+precisariam ser utilizadas, adicionando atrasos inerentes a comunicação em rede,
+quando na verdade a segunda thread poderia so ter recebido o recurso que a
+primeira thread estava utilizando, realizado o que precisava e retornado o
+recurso ao servidor após terminado. 
+
+Outro ponto que se torna claro tendo implemetado o algorítmo é a fragilidade que
+um tal mecanismo pode ter a instabilidades se não for tratado. Um caso é quando
+um host adquiri o serviço, é vitima de um erro, e é bloqueado, mas permanece
+conectado ao servidor, assim efetivamente bloqueando o funcionamento de todo o
+sistema distribuído.
+
+Outro caso que se pode imaginar é o host perder a conexão com o servidor.
+Considerar que ele libera o recurso neste caso pode ser perigoso pois este ainda
+pode estar utilizando-o. Porém, não tratar o caso até que este host se reconecte
+significaria bloquear todo o sistema sem ter visibilidade nenhuma se é possível
+ou não se recuperar.
+
+Um ultimo risco, mais corriqueiro que os outros, associado ao algorítmo de
+exclusão mútua é a quantidade de clientes. Caso não gerenciada corretamente com
+limites impostos pelo servidor, que não é feito na implementação atual, um
+excesso de conexões em paralelo a esta parte do sistema poderia ser um possível
+vetor de ataque para bloquear todo o resto do sistema.
 
 Eleição
 TCP é ruim para esta situação
