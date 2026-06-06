@@ -19,6 +19,7 @@ typedef enum {
   ELECTION_MSG_WINNER
 }election_msg_e;
 
+sem_t start_election;
 sem_t in_election; 
 sem_t lost_election; 
 
@@ -29,6 +30,12 @@ int num_neighbours;
 int leader = -1; 
 
 void call_election(){
+  if(sem_trywait(&start_election) == -1){
+    printf("already in election\n");
+    return;
+  }
+  printf("starting an election\n");
+  sem_post(&in_election);
   for(int i=host_id+1; i<num_neighbours; i++){
     int fd = socket_fds[i];
 
@@ -39,13 +46,13 @@ void call_election(){
     election_msg_e msg = ELECTION_MSG_ELECTION;
     send(fd,&msg,sizeof(election_msg_e),0);
   }
-  sem_post(&in_election);
 
   const struct timespec election_response_time = {.tv_sec = 2, .tv_nsec=0};
   int wait_res = sem_timedwait(&lost_election,&election_response_time);
   if(wait_res==-1 && errno == ETIMEDOUT){
     sem_wait(&in_election);
     leader = host_id;
+    printf("Became leader\n");
 
     for(int i=0; i<num_neighbours; i++){
       if(host_id == i)
@@ -61,6 +68,7 @@ void call_election(){
     }
 
   }
+  sem_post(&start_election);
 }
 
 void* attempt_conn_th(void* neighbour_id_ptr);
@@ -69,12 +77,17 @@ void* connection_th(void* neighbour_id_ptr){
   int neighbour_id = *((int*)neighbour_id_ptr);
   free(neighbour_id_ptr);
   int fd = socket_fds[neighbour_id];
+  printf("Start of neighbour %d reader thread\n", neighbour_id);
   while(true){
     election_msg_e msg;
 
+    printf("waiting for a message from neighbour %d\n", neighbour_id);
     ssize_t msg_size = recv(fd,&msg,sizeof(election_msg_e),0);
+
     if(msg_size == -1)
       break;
+
+    printf("received a message from neighbour %d\n", neighbour_id);
 
     switch(msg){
       case ELECTION_MSG_ELECTION:
@@ -95,6 +108,9 @@ void* connection_th(void* neighbour_id_ptr){
 
       case ELECTION_MSG_WINNER:
         leader = neighbour_id;
+        if(leader < host_id)
+          call_election();
+
         break;
 
       default: 
@@ -104,56 +120,101 @@ void* connection_th(void* neighbour_id_ptr){
 
   }
 
+  printf("lost connection with %d\n", neighbour_id);
+  if(neighbour_id < host_id){
+    printf("creating attempt connection thread\n");
+    pthread_t tid;
+    int *id = (int*)malloc(sizeof(int));
+    *id = neighbour_id;
+    int pthread_create_res = pthread_create(&tid,nullptr,&attempt_conn_th,id);
+  }
+
+  close(socket_fds[neighbour_id]);
+  return nullptr;
+}
+
+void connection_established(int neighbour_id){
+  printf("established connection with %d\n", neighbour_id);
   pthread_t tid;
   int *id = (int*)malloc(sizeof(int));
-  int pthread_create_res = pthread_create(&tid,nullptr,&attempt_conn_th,id);
-
-  return nullptr;
+  *id = neighbour_id;
+  int pthread_create_res = pthread_create(&tid,nullptr,&connection_th,id);
 }
 
 void* attempt_conn_th(void* neighbour_id_ptr){
   int neighbour_id = *((int*)neighbour_id_ptr);
   free(neighbour_id_ptr);
 
+  printf("attempted to connect to %d\n", neighbour_id);
+
   ERR_GUARD(neighbour_id == host_id, "Attempted to connect to current host\n");
 
-  if(neighbour_id > host_id){
-    socket_fds[neighbour_id] = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in address;
-    memset(&address, '\0', sizeof(struct sockaddr_in));
+  ERR_GUARD(neighbour_id > host_id, "Attempted to connect when it should be server");
 
-    address.sin_family = AF_INET;
-    address.sin_port = htons(8080); // Port 8080
-    //TODO: is this correct
-    //address.sin_addr.s_addr = INADDR_ANY;
-    inet_aton(ip_addrs[neighbour_id], (struct in_addr *) &(address.sin_addr.s_addr));
+  socket_fds[neighbour_id] = socket(AF_INET, SOCK_STREAM, 0);
 
-    int bind_res = bind(socket_fds[neighbour_id], (struct sockaddr *) &address, sizeof(address));
-    listen(socket_fds[neighbour_id], 1);
-    accept(socket_fds[neighbour_id],NULL,NULL);
+  struct sockaddr_in address;
+  address.sin_family = AF_INET;
+  address.sin_port = htons(8080);
+
+  inet_aton(ip_addrs[neighbour_id], (struct in_addr *) &(address.sin_addr.s_addr));
+
+  // Establish a connection to address on client_socket
+  printf("checking if server in %d is online on ip %s\n", neighbour_id, ip_addrs[neighbour_id]);
+  ERR_GUARD( 
+    connect(socket_fds[neighbour_id], (struct sockaddr *) &address, sizeof(address)),
+    "Failed to connect to neighbour\n"
+  );
+
+  connection_established(neighbour_id);
+  call_election();
+  return nullptr;
+}
+
+int get_neighbour_id(char* ip){
+  for(int i=0; i<num_neighbours; i++){
+    if(strcmp(ip_addrs[i],ip)==0)
+      return i;
   }
+  return -1;
+}
 
-  else{
-    socket_fds[neighbour_id] = socket(AF_INET, SOCK_STREAM, 0);
+void* server_th(void* data){
+  int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+  struct sockaddr_in address;
+  memset(&address, '\0', sizeof(struct sockaddr_in));
 
-    struct sockaddr_in address;
-    address.sin_family = AF_INET;
-    address.sin_port = htons(8080);
+  address.sin_family = AF_INET;
+  address.sin_port = htons(8080); // Port 8080
+  address.sin_addr.s_addr = INADDR_ANY;
+  int bind_res = bind(server_socket, (struct sockaddr *) &address, sizeof(address));
+  listen(server_socket, MAX_NETWORK_SIZE);
 
-    inet_aton(ip_addrs[neighbour_id], (struct in_addr *) &(address.sin_addr.s_addr));
+  while(true){
+    printf("waiting on connection\n");
+    int neighbour_socket  = accept(server_socket,NULL,NULL);
+    struct sockaddr_in neighbour_addr; 
+    socklen_t addr_len = sizeof(struct sockaddr_in);
 
-    // Establish a connection to address on client_socket
-    int connect_res = -1;
-    while(connect_res == -1){
-      connect_res = connect(socket_fds[neighbour_id], (struct sockaddr *) &address, sizeof(address));
-      sleep(RETRY_TIME);
+    ERR_GUARD(
+      getpeername(neighbour_socket, (struct sockaddr *) &neighbour_addr, &addr_len)==-1,
+      "Failed to resolve Remote Host Name"
+    ); 
+
+    char neighbour_ip[20];
+    strcpy(neighbour_ip, inet_ntoa(neighbour_addr.sin_addr));
+
+    int neighbour_id = get_neighbour_id(neighbour_ip);
+    if(neighbour_id == -1){
+      printf("unknown neighbour attempted to connect, ignored it\n");
+      continue;
     }
+
+    ERR_GUARD(neighbour_id == host_id, "Connected with neighbour with same id as host\n");
+    
+    socket_fds[neighbour_id] = neighbour_socket;
+    connection_established(neighbour_id);
   }
-
-  pthread_t tid;
-  int *id = (int*)malloc(sizeof(int));
-  int pthread_create_res = pthread_create(&tid,nullptr,&connection_th,id);
-
   return nullptr;
 }
 
@@ -169,23 +230,34 @@ int main(int argc, char** argv){
   ERR_GUARD(argc < 3+num_neighbours, "Insufficient IP address for network size\n");
 
   memset(socket_fds,0,MAX_NETWORK_SIZE*sizeof(int));
+  for(int i=0; i<num_neighbours; i++)
+    socket_fds[i] =-1;
+
+  sem_init(&start_election,0,1);
+  sem_init(&in_election,0,0);
+  sem_init(&lost_election,0,0);
+
   ip_addrs = &(argv[3]);
 
-  for(int i=0;i<num_neighbours; i++){
-    if(i==host_id)
-      continue;
+    
 
+  for(int i=0;i<host_id; i++){
+    printf("created thread for %d\n", i);
     pthread_t tid;
     int *id = (int*)malloc(sizeof(int));
+    *id = i;
     int pthread_create_res = pthread_create(&tid,nullptr,&attempt_conn_th,id);
   }
 
-  leader = num_neighbours -1; // assumes the highest id in network is the leader
+  pthread_t tid_server;
+  int pthread_create_res = pthread_create(&tid_server,nullptr,&server_th,nullptr);
+
+  leader =  -1; // assumes the highest id in network is the leader
   
   // loop print who is the leader or call election 
   while(true){
-    if(socket_fds[leader]==-1){
-      printf("Leader unreachable, calling election\n");
+    if(leader==-1){
+      printf("No leader\n");
       call_election();
     }
 
