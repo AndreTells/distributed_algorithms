@@ -1,0 +1,34 @@
+services:
+  host_0:
+    image: election_host:latest
+    tty: true 
+
+    networks:
+      election_network:
+        ipv4_address: 172.16.238.11
+
+    environment:
+      - NETWORK_SIZE=2
+      - HOST_ID=0
+      - NETWORK_IPS=172.16.238.11 172.16.238.12
+
+
+  host_1:
+    image: election_host:latest
+    tty: true 
+
+    networks:
+      election_network:
+        ipv4_address: 172.16.238.12
+
+    environment:
+      - NETWORK_SIZE=2
+      - HOST_ID=1
+      - NETWORK_IPS=172.16.238.11 172.16.238.12
+    
+networks:
+  election_network:
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.16.238.0/24"
