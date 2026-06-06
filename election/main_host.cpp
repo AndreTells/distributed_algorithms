@@ -84,10 +84,15 @@ void* connection_th(void* neighbour_id_ptr){
     printf("waiting for a message from neighbour %d\n", neighbour_id);
     ssize_t msg_size = recv(fd,&msg,sizeof(election_msg_e),0);
 
-    if(msg_size == -1)
+    if(msg_size == 0){
       break;
+    }
+    else if(msg_size == -1){
+      printf("Failed receival of message\n");
+      break;
+    }
 
-    printf("received a message from neighbour %d\n", neighbour_id);
+    printf("received a message from neighbour %d of size %ld\n", neighbour_id, msg_size);
 
     switch(msg){
       case ELECTION_MSG_ELECTION:
@@ -130,6 +135,9 @@ void* connection_th(void* neighbour_id_ptr){
   }
 
   close(socket_fds[neighbour_id]);
+
+  if(leader == neighbour_id)
+    call_election();
   return nullptr;
 }
 
@@ -239,8 +247,8 @@ int main(int argc, char** argv){
 
   ip_addrs = &(argv[3]);
 
+  printf("host with IP %s", ip_addrs[host_id]);
     
-
   for(int i=0;i<host_id; i++){
     printf("created thread for %d\n", i);
     pthread_t tid;
