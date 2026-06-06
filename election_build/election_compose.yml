@@ -8,9 +8,9 @@ services:
         ipv4_address: 172.16.238.11
 
     environment:
-      - NETWORK_SIZE=2
+      - NETWORK_SIZE=3
       - HOST_ID=0
-      - NETWORK_IPS=172.16.238.11 172.16.238.12
+      - NETWORK_IPS=172.16.238.11 172.16.238.12 172.16.238.13
 
 
   host_1:
@@ -22,9 +22,22 @@ services:
         ipv4_address: 172.16.238.12
 
     environment:
-      - NETWORK_SIZE=2
+      - NETWORK_SIZE=3
       - HOST_ID=1
-      - NETWORK_IPS=172.16.238.11 172.16.238.12
+      - NETWORK_IPS=172.16.238.11 172.16.238.12 172.16.238.13
+
+  host_2:
+    image: election_host:latest
+    tty: true 
+
+    networks:
+      election_network:
+        ipv4_address: 172.16.238.13
+
+    environment:
+      - NETWORK_SIZE=3
+      - HOST_ID=2
+      - NETWORK_IPS=172.16.238.11 172.16.238.12 172.16.238.13
     
 networks:
   election_network:
