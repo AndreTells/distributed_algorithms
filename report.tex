@@ -3,6 +3,10 @@
 \graphicspath{{./diagrams/}}
 
 \begin{document}
+Nome: André Silva Telles
+
+RA: 165263
+
 \section{Introdução}
 O presente documento tem por finalidade descrever a implementação dos seguintes
 algorítimos distribuídos e as principais escolhas de arquitetura feitas nestes:
@@ -20,20 +24,21 @@ com o exercício. Finalmente, a conclusão descreve possíveis limitações do
 trabalho e como poderia ter sido melhorado em outro contexto. 
 
 \section{Metodologia}
-\section{Linguagem de Programação}
+\subsection{Linguagem de Programação}
 A fim de manter o foco do exercício no algorítmo sem perder o nível de detalhe,
 foi escolhido implemetar os algorítmos em C++ visto o acesso relativamente
 direto que este tem as capacidades de rede do sistema.  
 
-\section{Compilação}
+\subsection{Compilação}
 A fim de ter um sistema e reprodutível, todos os testes foram compilados
 utilizando o sistema 'nix' que permite descrever tais processos e suas
 dependencias de uma forma declarativa.
 
-\section{Comunicação}
+\subsection{Comunicação}
 A comunicação TCP/IP foi escolhida para a comunicação entre os nós da rede
 devido a sua interface POSIX intuitiva em C/C++. Como descrito no manual da
-interace, tais connexões podem ser realizando o processo seguinte: 
+interace, tais servidores podem esperar por tais connexões realizando o processo
+seguinte: 
 
 \includegraphics[width=\textwidth]{./diagrams/posix_server.png}
 
@@ -44,10 +49,10 @@ servidor.
 
 Como estes processos são simples e não são o foco do presente projeto, deste
 ponto em diante não será mais detalhado como um servidor e um cliente se
-conectão no contexto do projeto, apenas que o fazem e o que se espera caso tal
-não seja possível.  
+conectam no contexto do projeto, apenas que o fazem e o que se espera caso tal
+não seja possível se isto for conveniente.
 
-\section{Ambiente de Teste}
+\subsection{Ambiente de Teste}
 Para simular um ambiente distribuído containers docker foram gerados localmente
 com instâncias dos sistemas. Julga-se que este procedimento tem a vantagem de
 ser mais facilmente reproduzível que um teste instanciando em máquinas virtuais
@@ -77,7 +82,7 @@ seguinte sequência de passos:
   \item enviar a messagem
 \end{itemize}
 
-Porém, para receber uma mensagem realiza-se: 
+Já para receber uma mensagem realiza-se: 
 \begin{itemize}
   \item ler um dados sobre relógio remote
   \item avançar tempo caso necessário
